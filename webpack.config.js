@@ -1,19 +1,24 @@
 const path = require('path');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const PreloadWebpackPlugin = require('preload-webpack-plugin');
 
 module.exports = (env, argv) => {
     let config = {
-        entry: './src/js/index.js',
+        devtool: 'source-map',
+        mode: argv.mode,
+        entry: {
+            index: ['./src/js/index.js', './src/scss/styles.scss'],
+        },
         output: {
-            path: path.resolve(__dirname, 'dist/js'),
-            filename: './stylish-css.bundled.js'
+            path: path.resolve(__dirname, 'dist'),
+            filename: 'js/[name].js'
         },
         module: {
             rules: [
                 {
                     test: /\.js$/,
-                    exclude: /(node_modules)/, // Set loaders to transform files,
+                    exclude: /node_modules/, // Set loaders to transform files,
                     use: {
                         loader: 'babel-loader',
                         options: {
@@ -23,28 +28,40 @@ module.exports = (env, argv) => {
                 },
                 {
                     test: /\.css$/,
-                    use: [
-                        { loader: MiniCssExtractPlugin.loader },
-                        { loader: 'css-loader' },
-                        {
-                            loader: 'postcss-loader',
-                            options: {
-                                ident: 'postcss',
-                                plugins: [
-                                    require('tailwindcss'),
-                                    require('autoprefixer')
-                                ]
+                    use: ExtractTextPlugin.extract({
+                        fallback: 'style-loader',
+                        use: [
+                            'style-loader',
+                            {
+                                loader: 'css-loader',
+                                options: { importLoaders: 1, sourceMap: true }
+                            },
+                            'postcss-loader',
+                        ],
+                    }),
+                },
+                {
+                    test: /\.scss$/,
+                    use: ExtractTextPlugin.extract({
+                        fallback: 'style-loader',
+                        use: [
+                            { loader: 'css-loader', options: { sourceMap: true } },
+                            { loader: 'postcss-loader', options: { sourceMap: true } },
+                            {
+                                loader: 'sass-loader',
+                                options: {
+                                    sourceMap: true,
+                                    prependData: `$env: ${argv.mode};`,
+                                }
                             }
-                        }
-                    ]
+                        ]
+                    })
                 }
             ]
         },
         plugins: [
             new CleanWebpackPlugin(),
-            new MiniCssExtractPlugin({
-                filename: "stylish-css.bundled.css"
-            })
+            new ExtractTextPlugin({ filename: 'css/[name].css' }),
         ]
     };
 
